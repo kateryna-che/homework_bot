@@ -74,8 +74,8 @@ def check_response(response):
 
 def parse_status(homework):
     """Извлекает статус домашней работы."""
-    homework_name = homework['homework_name']
-    homework_status = homework['status']
+    homework_name = homework.get('homework_name')
+    homework_status = homework.get('status')
 
     verdicts = {
         'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
@@ -86,7 +86,7 @@ def parse_status(homework):
         verdict = verdicts[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except KeyError:
-        logging.error(f'Недокументированный статус домашней работы.')
+        logging.error('Недокументированный статус домашней работы.')
 
 
 def check_tokens():
