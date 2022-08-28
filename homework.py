@@ -61,18 +61,15 @@ def get_api_answer(current_timestamp):
 def check_response(response):
     """Проверяет ответ API на корректность."""
     if not (isinstance(response, dict)):
-        logger.error('Ответ сервера не является словарем!')
         raise TypeError('Ответ сервера не является словарем!')
 
-    try:
-        homeworks = response['homeworks']
-        if not (isinstance(homeworks, list)):
-            logger.error('homeworks не является списком!')
-            raise TypeError('homeworks не является списком!')
-        return homeworks
-    except Exception as error:
-        logging.error(f'Отсутствие ожидаемых ключей в ответе API.{error}')
-        raise
+    homeworks = response.get('homeworks')
+    if not (isinstance(homeworks, list)):
+        raise TypeError('homeworks не является списком!')
+
+    if 'homeworks' not in response:
+        raise KeyError('Пришел пустой ответ')
+    return homeworks
 
 
 def parse_status(homework):
@@ -88,41 +85,37 @@ def parse_status(homework):
     try:
         verdict = verdicts[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
-    except Exception as error:
-        logging.error(f'Недокументированный статус домашней работы.{error}')
-        raise
+    except KeyError:
+        logging.error(f'Недокументированный статус домашней работы.')
 
 
 def check_tokens():
     """Проверяет доступность переменных окружения."""
-    try:
-        if PRACTICUM_TOKEN and TELEGRAM_TOKEN and TELEGRAM_CHAT_ID is not None:
-            return True
-    except Exception as error:
-        logging.critical(f'Недоступна переменная окружения. {error}')
-    return False
+    return all((PRACTICUM_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_TOKEN))
 
 
 def main():
     """Основная логика работы бота."""
-    current_timestamp = int(time.time())
+    current_timestamp = 0
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    check_tokens()
-    while True:
+    check = check_tokens()
+    if not check:
+        logging.critical('Недоступна переменная окружения.')
+        raise ValueError('Функция check_tokens вернула False')
+
+    while check:
         try:
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
-            for i in range(len(homeworks)):
-                message = parse_status(homeworks[i])
+            if homeworks:
+                message = parse_status(homeworks[0])
                 send_message(bot, message)
-
             current_timestamp = int(time.time())
-            time.sleep(RETRY_TIME)
         except Exception as error:
-            message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
-            time.sleep(RETRY_TIME)
-        else:
+            message_error = f'Сбой в работе программы: {error}'
+            send_message(bot, message_error)
+            logging.error(message_error)
+        finally:
             time.sleep(RETRY_TIME)
 
 
