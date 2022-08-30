@@ -13,7 +13,8 @@ load_dotenv()
 logging.basicConfig(
     level=logging.INFO,
     filename='main.log',
-    filemode='a'
+    filemode='a',
+    encoding='utf-8'
 )
 logger = logging.getLogger(__name__)
 handler = RotatingFileHandler(
@@ -74,19 +75,20 @@ def check_response(response):
 
 def parse_status(homework):
     """Извлекает статус домашней работы."""
-    homework_name = homework.get('homework_name')
-    homework_status = homework.get('status')
-
+    homework_name = homework['homework_name']
+    homework_status = homework['status']
     verdicts = {
         'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
         'reviewing': 'Работа взята на проверку ревьюером.',
         'rejected': 'Работа проверена: у ревьюера есть замечания.'
     }
+    if homework_status not in verdicts:
+        raise KeyError('Недокументированный статус домашней работы.')
     try:
         verdict = verdicts[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except KeyError:
-        logging.error('Недокументированный статус домашней работы.')
+        logging.error('Отсутствие ключа homework_status или homework_name.')
 
 
 def check_tokens():
