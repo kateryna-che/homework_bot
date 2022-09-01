@@ -43,9 +43,10 @@ def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.info('Сообщение отправлено')
     except Exception as error:
         logging.error(f'Не удалось отправить сообщение. {error}')
+    else:
+        logging.info('Сообщение отправлено')
 
 
 def get_api_answer(current_timestamp):
@@ -55,8 +56,7 @@ def get_api_answer(current_timestamp):
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     if response.status_code != HTTPStatus.OK:
         raise Exception(f'Статус ответа сервера:{response.status_code}')
-    response = response.json()
-    return response
+    return response.json()
 
 
 def check_response(response):
@@ -68,8 +68,8 @@ def check_response(response):
     if not (isinstance(homeworks, list)):
         raise TypeError('homeworks не является списком!')
 
-    if 'homeworks' not in response:
-        raise KeyError('Пришел пустой ответ')
+    if homeworks is None:
+        raise KeyError('В ответе нет работ.')
     return homeworks
 
 
@@ -77,15 +77,10 @@ def parse_status(homework):
     """Извлекает статус домашней работы."""
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
-    verdicts = {
-        'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
-        'reviewing': 'Работа взята на проверку ревьюером.',
-        'rejected': 'Работа проверена: у ревьюера есть замечания.'
-    }
-    if homework_status not in verdicts:
+    if homework_status not in HOMEWORK_STATUSES:
         raise KeyError('Недокументированный статус домашней работы.')
     try:
-        verdict = verdicts[homework_status]
+        verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except KeyError:
         logging.error('Отсутствие ключа homework_status или homework_name.')
@@ -112,7 +107,7 @@ def main():
             if homeworks:
                 message = parse_status(homeworks[0])
                 send_message(bot, message)
-            current_timestamp = int(time.time())
+            current_timestamp = response.get('current_date')
         except Exception as error:
             message_error = f'Сбой в работе программы: {error}'
             send_message(bot, message_error)
