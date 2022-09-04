@@ -51,8 +51,7 @@ def send_message(bot, message):
 
 def get_api_answer(current_timestamp):
     """Делает запрос к API-сервиса."""
-    timestamp = current_timestamp
-    params = {'from_date': timestamp}
+    params = {'from_date': current_timestamp}
     response = requests.get(ENDPOINT, headers=HEADERS, params=params)
     if response.status_code != HTTPStatus.OK:
         raise Exception(f'Статус ответа сервера:{response.status_code}')
@@ -83,7 +82,7 @@ def parse_status(homework):
         verdict = HOMEWORK_STATUSES[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     except KeyError:
-        logging.error('Отсутствие ключа homework_status или homework_name.')
+        raise KeyError('Отсутствие ключа homework_status или homework_name.')
 
 
 def check_tokens():
